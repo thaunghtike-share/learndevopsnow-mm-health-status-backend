@@ -1,5 +1,9 @@
 from pathlib import Path
+import os
+from dotenv import load_dotenv
 
+# Load environment variables from .env file
+load_dotenv()
 BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Security settings - USING ENV VARIABLES
@@ -65,7 +69,6 @@ TEMPLATES = [
 
 WSGI_APPLICATION = 'status_monitor.wsgi.application'
 
-# Database - USING ENV VARIABLES
 DATABASES = {
     'default': {
         'ENGINE': 'django.db.backends.mysql',
@@ -74,6 +77,9 @@ DATABASES = {
         'PASSWORD': os.getenv('DB_PASSWORD', 'Tho@861998'),
         'HOST': os.getenv('DB_HOST', '20.198.180.60'),
         'PORT': os.getenv('DB_PORT', '3306'),
+        'OPTIONS': {
+            'init_command': "SET sql_mode='STRICT_TRANS_TABLES'",
+        },
     }
 }
 
@@ -93,7 +99,7 @@ AUTH_PASSWORD_VALIDATORS = [
 ]
 
 LANGUAGE_CODE = 'en-us'
-TIME_ZONE = 'Asia/Yangon'
+TIME_ZONE = 'UTC'
 USE_I18N = True
 USE_TZ = True
 

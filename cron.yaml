@@ -1,0 +1,44 @@
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: status-check-cron
+  namespace: learndevopsnow
+spec:
+  schedule: "*/3 * * * *"
+  startingDeadlineSeconds: 300
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 3
+  jobTemplate:
+    spec:
+      backoffLimit: 3
+      activeDeadlineSeconds: 600
+      template:
+        spec:
+          containers:
+          - name: status-checker
+            image: mahar.azurecr.io/ldn-status-api:latest
+            command: ["python", "manage.py", "check_services"]
+          restartPolicy: OnFailure
+
+---
+apiVersion: batch/v1
+kind: CronJob
+metadata:
+  name: cleanup-data-cron
+  namespace: learndevopsnow
+spec:
+  schedule: "0 2 * * *"  # Run daily at 2 AM
+  concurrencyPolicy: Forbid
+  successfulJobsHistoryLimit: 2
+  failedJobsHistoryLimit: 2
+  jobTemplate:
+    spec:
+      backoffLimit: 2
+      activeDeadlineSeconds: 1800  # 30 minutes max for cleanup
+      template:
+        spec:
+          containers:
+          - name: cleanup-data
+            image: mahar.azurecr.io/ldn-status-api:latest
+            command: ["python", "manage.py", "cleanup_old_data"]
+          restartPolicy: OnFailure

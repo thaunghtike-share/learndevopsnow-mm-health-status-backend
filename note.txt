@@ -1,0 +1,3 @@
+python manage.py setup_services #to create services 
+python manage.py check_services #to check services
+python manage.py cleanup_data #to delete data older than 7 days

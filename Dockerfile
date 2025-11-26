@@ -33,4 +33,4 @@ COPY . /app/
 EXPOSE 8000
 
 # Run migrations before starting Gunicorn (optional, adjust if you run migrations elsewhere)
-CMD ["sh", "-c", "python manage.py migrate && gunicorn blogapis.wsgi:application --bind 0.0.0.0:8000 --workers 4"]
+CMD ["sh", "-c", "python manage.py migrate && gunicorn status_monitor.wsgi:application --bind 0.0.0.0:8000 --workers 4"]

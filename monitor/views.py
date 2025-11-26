@@ -2,28 +2,23 @@ from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta, datetime
-import pytz
 from .models import Service, StatusCheck, OutagePeriod
 
 @api_view(['GET'])
 def status_overview(request):
     services_data = []
     
-    # Myanmar timezone
-    myanmar_tz = pytz.timezone('Asia/Yangon')
-    myanmar_now = timezone.now().astimezone(myanmar_tz)
+    # Use UTC timezone
+    utc_now = timezone.now()
     
     for service in Service.objects.filter(is_active=True):
-        # Get today's start in Myanmar time
-        today_start = myanmar_now.replace(hour=0, minute=0, second=0, microsecond=0)
-        
-        # Convert to UTC for database query
-        today_start_utc = today_start.astimezone(pytz.UTC)
+        # Get today's start in UTC
+        today_start = utc_now.replace(hour=0, minute=0, second=0, microsecond=0)
         
         # Get today's checks
         today_checks = StatusCheck.objects.filter(
             service=service,
-            checked_at__gte=today_start_utc
+            checked_at__gte=today_start
         ).order_by('checked_at')
         
         # Get latest check (current status)
@@ -34,15 +29,14 @@ def status_overview(request):
         today_total = today_checks.count()
         uptime_today = (today_operational / today_total * 100) if today_total > 0 else 100
         
-        # Format today's history for the status bar (Myanmar time)
+        # Format today's history for the status bar (UTC time)
         today_history = []
         for check in today_checks:
-            myanmar_time = check.checked_at.astimezone(myanmar_tz)
             today_history.append({
-                'time': myanmar_time.strftime('%H:%M'),
+                'time': check.checked_at.strftime('%H:%M'),
                 'status': check.status,
                 'response_time': check.response_time,
-                'full_time': myanmar_time.isoformat()
+                'full_time': check.checked_at.isoformat()
             })
         
         # Get detailed outage timeline for last 7 days
@@ -55,7 +49,7 @@ def status_overview(request):
         # Create detailed timeline for last 7 days
         detailed_timeline = []
         for day in range(7):
-            day_date = (myanmar_now - timedelta(days=day)).date()
+            day_date = (utc_now - timedelta(days=day)).date()
             day_start = timezone.make_aware(datetime.combine(day_date, datetime.min.time()))
             day_end = timezone.make_aware(datetime.combine(day_date, datetime.max.time()))
             
@@ -69,19 +63,17 @@ def status_overview(request):
                 status = 'mixed'
                 outage_details = []
                 for outage in day_outages:
-                    start_mmt = outage.started_at.astimezone(myanmar_tz)
                     if outage.resolved_at:
-                        end_mmt = outage.resolved_at.astimezone(myanmar_tz)
                         duration = outage.duration_minutes
                         outage_details.append({
-                            'start_time': start_mmt.strftime('%H:%M'),
-                            'end_time': end_mmt.strftime('%H:%M'),
+                            'start_time': outage.started_at.strftime('%H:%M'),
+                            'end_time': outage.resolved_at.strftime('%H:%M'),
                             'duration': f"{duration}min",
                             'status': 'outage'
                         })
                     else:
                         outage_details.append({
-                            'start_time': start_mmt.strftime('%H:%M'),
+                            'start_time': outage.started_at.strftime('%H:%M'),
                             'end_time': 'Ongoing',
                             'duration': 'Ongoing',
                             'status': 'outage'
@@ -96,14 +88,13 @@ def status_overview(request):
                 'status': status,
                 'outage_count': len(day_outages),
                 'outage_details': outage_details,
-                'is_today': day_date == myanmar_now.date()
+                'is_today': day_date == utc_now.date()
             })
         
-        # Format last checked time in Myanmar time
+        # Format last checked time in UTC
         if latest_check:
-            last_checked_myanmar = latest_check.checked_at.astimezone(myanmar_tz)
-            last_checked = last_checked_myanmar.isoformat()
-            last_checked_display = last_checked_myanmar.strftime('%H:%M MMT')
+            last_checked = latest_check.checked_at.isoformat()
+            last_checked_display = latest_check.checked_at.strftime('%H:%M UTC')
         else:
             last_checked = None
             last_checked_display = None
@@ -119,12 +110,12 @@ def status_overview(request):
             'last_7_days_timeline': detailed_timeline[::-1],  # Oldest first
             'last_checked': last_checked,
             'last_checked_display': last_checked_display,
-            'timezone': 'MMT (UTC+6:30)'
+            'timezone': 'UTC'
         })
     
     return Response({
         'services': services_data,
-        'last_updated': myanmar_now.isoformat(),
-        'last_updated_display': myanmar_now.strftime('%Y-%m-%d %H:%M:%S MMT'),
-        'timezone': 'Asia/Yangon (UTC+6:30)'
+        'last_updated': utc_now.isoformat(),
+        'last_updated_display': utc_now.strftime('%Y-%m-%d %H:%M:%S UTC'),
+        'timezone': 'UTC'
     })
