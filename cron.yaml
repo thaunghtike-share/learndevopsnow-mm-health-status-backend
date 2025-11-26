@@ -4,7 +4,7 @@ metadata:
   name: status-check-cron
   namespace: learndevopsnow
 spec:
-  schedule: "*/3 * * * *"
+  schedule: "*/30 * * * *" # Every 30 minutes
   startingDeadlineSeconds: 300
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 3
@@ -27,7 +27,7 @@ metadata:
   name: cleanup-data-cron
   namespace: learndevopsnow
 spec:
-  schedule: "0 2 * * *"  # Run daily at 2 AM
+  schedule: "0 12 */3 * *" # At 12:00 PM, every 3 days
   concurrencyPolicy: Forbid
   successfulJobsHistoryLimit: 2
   failedJobsHistoryLimit: 2
